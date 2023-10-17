@@ -1,4 +1,4 @@
-package me.leavestyle.builder;
+package me.leavestyle.handler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -16,116 +16,141 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-public class MultiCacheBuilder<K, V> {
-
-    private static final Boolean DEFAULT_CACHE_ON = Boolean.TRUE;
+public class ArrStrCacheHandler<K, V> {
 
     /**
      * 缓存开关，默认开启
      */
+    @NonNull
     private Boolean cacheOn;
+
+    /**
+     * keys
+     */
+    @NonNull
+    private final List<K> rawKeys;
 
     /**
      * DB查询函数
      */
+    @NonNull
     private final Function<List<K>, List<V>> dbFun;
 
-    public MultiCacheBuilder(Function<List<K>, List<V>> dbFun) {
-        this(DEFAULT_CACHE_ON, dbFun);
-    }
-
-    public MultiCacheBuilder(@NonNull Boolean onCache, @NonNull Function<List<K>, List<V>> dbFun) {
-        this.cacheOn = onCache;
-        this.dbFun = dbFun;
-    }
-
-    private Function<K, String> redisKeyFun;
-    private Function<List<String>, List<String>> obtainCacheFun;
-    private BiConsumer<Map<String, String>, Long> cacheBiConsumer;
-    private Function<V, K> dbKeyFun;
     /**
      * 不缓存策略，默认关闭
      */
-    private Predicate<List<V>> noCacheStrategy = list -> Boolean.FALSE;
+    @NonNull
+    private Predicate<List<V>> noCacheStrategy;
+
     /**
      * redis过期时间，时间单位和 putCacheConsumer 中保持一致
      */
-    private Long expireTime = 3000L;
+    @NonNull
+    private Long expireTime;
 
-    public MultiCacheBuilder<K, V> cacheOn() {
+    public ArrStrCacheHandler(
+            @NonNull List<K> rawKeys, @NonNull Boolean onCache, @NonNull Function<List<K>, List<V>> dbFun,
+            @NonNull Predicate<List<V>> noCacheStrategy, @NonNull Long expireTime
+    ) {
+        this.rawKeys = rawKeys;
+        this.cacheOn = onCache;
+        this.dbFun = dbFun;
+        this.noCacheStrategy = noCacheStrategy;
+        this.expireTime = expireTime;
+    }
+
+
+    /**
+     * redis的key生成函数
+     */
+    private Function<K, String> redisKeyFun;
+
+    /**
+     * 获取缓存函数
+     */
+    private Function<List<String>, List<String>> obtainCacheFun;
+
+    /**
+     * 缓存数据函数
+     */
+    private BiConsumer<Map<String, String>, Long> cacheBiConsumer;
+
+    /**
+     * DB的key取值函数
+     */
+    private Function<V, K> dbKeyFun;
+
+    public ArrStrCacheHandler<K, V> cacheOn() {
         this.cacheOn = Boolean.TRUE;
         return this;
     }
 
-    public MultiCacheBuilder<K, V> cacheOff() {
+    public ArrStrCacheHandler<K, V> cacheOff() {
         this.cacheOn = Boolean.FALSE;
         return this;
     }
 
-    public MultiCacheBuilder<K, V> cacheOnSupp(@NonNull BooleanSupplier supplier) {
+    public ArrStrCacheHandler<K, V> cacheOnSupp(@NonNull BooleanSupplier supplier) {
         this.cacheOn = supplier.getAsBoolean();
         return this;
     }
 
-    public MultiCacheBuilder<K, V> initObtainCacheHandle(UnaryOperator<List<String>> obtainCacheFun) {
+    public ArrStrCacheHandler<K, V> initObtainCacheHandle(UnaryOperator<List<String>> obtainCacheFun) {
         this.obtainCacheFun = obtainCacheFun;
         return this;
     }
 
-    public MultiCacheBuilder<K, V> initCacheHandle(BiConsumer<Map<String, String>, Long> cacheBiConsumer) {
+    public ArrStrCacheHandler<K, V> initCacheHandle(BiConsumer<Map<String, String>, Long> cacheBiConsumer) {
         this.cacheBiConsumer = cacheBiConsumer;
         return this;
     }
 
-    public MultiCacheBuilder<K, V> initDbKeyHandle(Function<V, K> dbKeyFun) {
+    public ArrStrCacheHandler<K, V> initDbKeyHandle(Function<V, K> dbKeyFun) {
         this.dbKeyFun = dbKeyFun;
         return this;
     }
 
-    public MultiCacheBuilder<K, V> initRedisKeyHandle(Function<K, String> redisKeyFun) {
+    public ArrStrCacheHandler<K, V> initRedisKeyHandle(Function<K, String> redisKeyFun) {
         this.redisKeyFun = redisKeyFun;
         return this;
     }
 
-    public MultiCacheBuilder<K, V> opNoCacheStrategyHandle(Predicate<List<V>> nocacheStrategy) {
+    public ArrStrCacheHandler<K, V> opNoCacheStrategyHandle(@NonNull Predicate<List<V>> nocacheStrategy) {
         this.noCacheStrategy = nocacheStrategy;
         return this;
     }
 
-    public MultiCacheBuilder<K, V> opExpireTime(long expireTime) {
+    public ArrStrCacheHandler<K, V> opExpireTime(@NonNull Long expireTime) {
         this.expireTime = expireTime;
         return this;
     }
 
-    public Function<List<K>, List<V>> handler() {
-        // 实现查询逻辑
-        return rawKeys -> {
-            // 开关关闭，执行DB
-            if (!cacheOn) {
-                log.debug("onCache is false , query form DB");
-                return dbFun.apply(rawKeys);
-            }
-            // 关键缓存参数不存在，执行DB
-            if (obtainCacheFun == null || redisKeyFun == null || dbKeyFun == null || noCacheStrategy == null) {
-                log.debug("cache param is invalid , query form DB");
-                return dbFun.apply(rawKeys);
-            }
-            // 校验和过滤key
-            List<K> filterRawKeys = rawKeys.stream().filter(Objects::nonNull).distinct().collect(Collectors.toList());
-            if (CollectionUtils.isEmpty(filterRawKeys)) {
-                return new ArrayList<>();
-            }
-            // 查缓存
-            Map<K, List<V>> cachedData = queryCache(filterRawKeys, redisKeyFun);
-            // 未缓存的key
-            List<K> noCachedKeys = toNoCachedKeys(filterRawKeys, cachedData);
-            // 读库
-            Map<K, List<V>> dbData = getMultiDataFromDb(noCachedKeys, dbFun, dbKeyFun);
-            // 缓存
-            cacheMultiData(noCachedKeys, redisKeyFun, dbData, noCacheStrategy, expireTime);
-            // 按顺序合并
-            return concat(filterRawKeys, cachedData, dbData);
-        };
+    public List<V> handle() {
+        // 开关关闭，执行DB
+        if (!cacheOn) {
+            log.debug("onCache is false , query form DB");
+            return dbFun.apply(rawKeys);
+        }
+        // 关键缓存参数不存在，执行DB
+        if (obtainCacheFun == null || redisKeyFun == null || dbKeyFun == null || noCacheStrategy == null) {
+            log.debug("cache param is invalid , query form DB");
+            return dbFun.apply(rawKeys);
+        }
+        // 校验和过滤key
+        List<K> filterRawKeys = rawKeys.stream().filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(filterRawKeys)) {
+            return new ArrayList<>();
+        }
+        // 查缓存
+        Map<K, List<V>> cachedData = queryCache(filterRawKeys, redisKeyFun);
+        // 未缓存的key
+        List<K> noCachedKeys = toNoCachedKeys(filterRawKeys, cachedData);
+        // 读库
+        Map<K, List<V>> dbData = getMultiDataFromDb(noCachedKeys, dbFun, dbKeyFun);
+        // 缓存
+        cacheMultiData(noCachedKeys, redisKeyFun, dbData, noCacheStrategy, expireTime);
+        // 按顺序合并
+        return concat(filterRawKeys, cachedData, dbData);
     }
 
     private <V, K> List<V> concat(List<K> rawKeys, Map<K, List<V>> cachedData, Map<K, List<V>> dbData) {
