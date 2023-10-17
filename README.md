@@ -1,10 +1,9 @@
 # java-cache-utils
 
 > 简介：工具包封装了批量查询缓存的功能，缓存中不存在的数据，会去DB中查询，然后聚合数据。使用了构造器模式和函数式编程，提供了链式调用的使用方式。
->
-> 补充：展示流程图使用了[Mermaid](https://github.com/BackMarket/github-mermaid-extension)工具
 
 ## 查询流程
+> 展示流程图使用了[Mermaid](https://github.com/BackMarket/github-mermaid-extension)工具
 
 ```mermaid
       graph LR
