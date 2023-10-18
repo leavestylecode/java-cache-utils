@@ -56,6 +56,6 @@
 
 ### 1. 命名
 
-* `reXX() `re表示必须赋值的字段，如果是null，build时会报错。
-* `initXX() `init表示使用缓存必须赋值的字段，默认是null，不配置会执行DB。
-* `opXX() `op表示可选字段，有默认值。
+* `reXX` re表示必须赋值的字段，如果是null，build时会报错。
+* `initXX` init表示使用缓存必须赋值的字段，默认是null，不配置会执行DB。
+* `opXX` op表示可选字段，有默认值。
