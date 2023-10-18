@@ -6,7 +6,6 @@ import redis.clients.jedis.Jedis;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -21,13 +20,17 @@ class CacheUtilsTest {
         List<User> users = ArrStrCacheHandler.<String, User>builder()
                 .reRawKeys(userIds)
                 .reDbFun(CacheUtilsTest::dbFun)
-                .initRedisKeyFun(i -> "test-key:" + i)
+                .initRedisKeyFun(CacheUtilsTest::toKeyStr)
                 .initObtainCacheFun(this::mGet)
                 .initDbKeyFun(User::getUserId)
-                .initCacheBiConsumer(getMapLongBiConsumer())
+                .initCacheBiConsumer(this::cacheData)
                 .build().handle();
 
         users.forEach(System.out::println);
+    }
+
+    private static String toKeyStr(String i) {
+        return "test-key:" + i;
     }
 
     private static List<User> dbFun(List<String> keys) {
@@ -50,10 +53,10 @@ class CacheUtilsTest {
         }).collect(Collectors.toList());
     }
 
-    private BiConsumer<Map<String, String>, Long> getMapLongBiConsumer() {
-        return (map, expire) -> map.forEach((key, value) -> {
+    private void cacheData(Map<String, String> dataMap, Long expireTime) {
+        dataMap.forEach((key, value) -> {
             jedis.set(key, value);
-            jedis.expire(key, expire);
+            jedis.expire(key, expireTime);
         });
     }
 
