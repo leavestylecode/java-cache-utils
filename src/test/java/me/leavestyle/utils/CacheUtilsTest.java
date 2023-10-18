@@ -1,5 +1,6 @@
 package me.leavestyle.utils;
 
+import me.leavestyle.handler.ArrStrCacheHandler;
 import org.junit.jupiter.api.Test;
 import redis.clients.jedis.Jedis;
 
@@ -17,12 +18,14 @@ class CacheUtilsTest {
     void test01() {
         List<String> userIds = Stream.of("1", "2", "3").collect(Collectors.toList());
 
-        List<User> users = CacheUtils.initArrStrCacheHandler(userIds, CacheUtilsTest::dbFun)
-                .initRedisKeyHandle(i -> "test-key:" + i)
-                .initObtainCacheHandle(this::mGet)
-                .initDbKeyHandle(User::getUserId)
-                .initCacheHandle(getMapLongBiConsumer())
-                .handle();
+        List<User> users = ArrStrCacheHandler.<String, User>builder()
+                .reRawKeys(userIds)
+                .reDbFun(CacheUtilsTest::dbFun)
+                .initRedisKeyFun(i -> "test-key:" + i)
+                .initObtainCacheFun(this::mGet)
+                .initDbKeyFun(User::getUserId)
+                .initCacheBiConsumer(getMapLongBiConsumer())
+                .build().handle();
 
         users.forEach(System.out::println);
     }
