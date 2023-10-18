@@ -18,6 +18,13 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * 批量缓存处理：缓存值为数组格式的字符串。
+ * 即缓存key对应1-n个value的场景。
+ *
+ * @param <K> key的基础类型
+ * @param <V> value的基础类型
+ */
 @Slf4j
 @Builder
 public class ArrStrCacheHandler<K, V> {
@@ -49,12 +56,11 @@ public class ArrStrCacheHandler<K, V> {
     private final Predicate<List<V>> opNoCacheStrategy = list -> false;
 
     /**
-     * redis过期时间，时间单位和 putCacheConsumer 中保持一致
+     * redis过期时间，时间单位和 initCacheBiConsumer 中保持一致
      */
     @NonNull
     @Builder.Default
     private final Long opExpireTime = 3000L;
-
 
     /**
      * redis的key生成函数
