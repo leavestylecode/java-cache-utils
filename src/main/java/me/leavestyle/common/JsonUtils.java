@@ -3,9 +3,12 @@ package me.leavestyle.common;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
+@Slf4j
+@SuppressWarnings("java:S1168")
 public class JsonUtils {
 
     JsonUtils() {
@@ -25,4 +28,28 @@ public class JsonUtils {
     public static String toJsonStr(Object obj) throws JsonProcessingException {
         return OBJECT_MAPPER.writeValueAsString(obj);
     }
+
+    public static <T> List<T> toListObjWithDefault(String json, Class<T> type) {
+        try {
+            return toListObj(json, type);
+        } catch (JsonProcessingException e) {
+            logError(json);
+            return null;
+        }
+    }
+
+    public static <T> T toObjWithDefault(String json, Class<T> type) {
+        try {
+            return toObj(json, type);
+        } catch (JsonProcessingException e) {
+            logError(json);
+            return null;
+        }
+    }
+
+    private static void logError(String json) {
+        log.error("convert json : {} to obj error", json);
+    }
+
+
 }

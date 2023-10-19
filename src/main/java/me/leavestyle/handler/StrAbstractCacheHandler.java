@@ -7,9 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.ObjLongConsumer;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 /**
  * 批量缓存处理：缓存值为数组格式的字符串。
@@ -42,12 +43,12 @@ public abstract class StrAbstractCacheHandler<K, V, R> extends AbstractCacheHand
     /**
      * 获取缓存函数
      */
-    protected final Function<List<String>, List<String>> initObtainCacheFun;
+    protected final UnaryOperator<List<String>> initObtainCacheFun;
 
     /**
      * 缓存数据函数
      */
-    protected final BiConsumer<Map<String, String>, Long> initCacheBiConsumer;
+    protected final ObjLongConsumer<Map<String, String>> initCacheBiConsumer;
 
     /**
      * 不缓存策略，默认关闭
@@ -62,6 +63,5 @@ public abstract class StrAbstractCacheHandler<K, V, R> extends AbstractCacheHand
     @NonNull
     @Builder.Default
     protected final Long opExpireTime = 3000L;
-
 
 }
