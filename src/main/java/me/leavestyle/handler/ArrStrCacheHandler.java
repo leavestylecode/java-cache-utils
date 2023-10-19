@@ -44,11 +44,6 @@ public class ArrStrCacheHandler<K, V> extends AbstractCacheHandler<K, List<V>> {
     protected final Class<V> initValueType;
 
     @Override
-    protected List<K> fetchKeys() {
-        return this.reKeys.stream().filter(Objects::nonNull).collect(Collectors.toList());
-    }
-
-    @Override
     protected Map<K, List<V>> fetchFromCache(List<K> keys) {
         List<String> cacheKeys = keys.stream().map(this.initRedisKeyFun).collect(Collectors.toList());
         List<String> redisValues = initObtainCacheFun.apply(cacheKeys);
@@ -125,9 +120,9 @@ public class ArrStrCacheHandler<K, V> extends AbstractCacheHandler<K, List<V>> {
     }
 
     @Override
-    public List<V> handleToList() {
-        Map<K, List<V>> data = this.handleToMap();
-        return reKeys.stream().map(data::get).filter(CollectionUtils::isNotEmpty).flatMap(Collection::stream).collect(Collectors.toList());
+    public List<V> handleToList(List<K> keys) {
+        Map<K, List<V>> data = this.handleToMap(keys);
+        return keys.stream().map(data::get).filter(CollectionUtils::isNotEmpty).flatMap(Collection::stream).collect(Collectors.toList());
     }
 
 }

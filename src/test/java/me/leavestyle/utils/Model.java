@@ -8,11 +8,11 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class Model {
 
-    private String userId;
+    private String id;
 
-    private String userName;
+    private String name;
 
-    private String userAddress;
+    private String status;
 }

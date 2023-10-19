@@ -24,12 +24,6 @@ public abstract class AbstractCacheHandler<K, V> {
     private Boolean cacheOn = Boolean.TRUE;
 
     /**
-     * keys
-     */
-    @NonNull
-    protected final List<K> reKeys;
-
-    /**
      * 不缓存策略，默认关闭
      */
     @NonNull
@@ -58,8 +52,6 @@ public abstract class AbstractCacheHandler<K, V> {
      */
     protected final BiConsumer<Map<String, String>, Long> initCacheBiConsumer;
 
-    protected abstract List<K> fetchKeys();
-
     protected abstract Map<K, V> fetchFromCache(List<K> keys);
 
     protected abstract Map<K, V> fetchFromDb(List<K> keys);
@@ -68,16 +60,19 @@ public abstract class AbstractCacheHandler<K, V> {
 
     protected abstract Map<K, V> mergeData(Result<K, V> result);
 
-    public abstract List<?> handleToList();
+    public abstract List<?> handleToList(List<K> keys);
 
-    public Map<K, V> handleToMap() {
-        return mergeData(handleToResult());
+    public Map<K, V> handleToMap(List<K> keys) {
+        return mergeData(handleToResult(keys));
     }
 
-    protected Result<K, V> handleToResult() {
-        List<K> keys = fetchKeys();
+    protected Result<K, V> handleToResult(List<K> keys) {
         if (!cacheOn) {
             log.debug("onCache is false , query form DB");
+            return Result.of(keys, new HashMap<>(), fetchFromDb(keys));
+        }
+        if (initRedisKeyFun == null || initObtainCacheFun == null || initCacheBiConsumer == null) {
+            log.debug("init cache param is null, query form DB");
             return Result.of(keys, new HashMap<>(), fetchFromDb(keys));
         }
         Map<K, V> cacheData = fetchFromCache(keys);
