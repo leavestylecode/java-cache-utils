@@ -11,6 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -19,6 +22,41 @@ public abstract class AbstractCacheHandler<K, V> {
     @NonNull
     @Builder.Default
     private Boolean cacheOn = Boolean.TRUE;
+
+    /**
+     * keys
+     */
+    @NonNull
+    protected final List<K> reKeys;
+
+    /**
+     * 不缓存策略，默认关闭
+     */
+    @NonNull
+    @Builder.Default
+    protected final Predicate<V> opNoCacheStrategy = obj -> false;
+
+    /**
+     * redis过期时间，时间单位和 initCacheBiConsumer 中保持一致
+     */
+    @NonNull
+    @Builder.Default
+    protected final Long opExpireTime = 3000L;
+
+    /**
+     * redis的key生成函数
+     */
+    protected final Function<K, String> initRedisKeyFun;
+
+    /**
+     * 获取缓存函数
+     */
+    protected final Function<List<String>, List<String>> initObtainCacheFun;
+
+    /**
+     * 缓存数据函数
+     */
+    protected final BiConsumer<Map<String, String>, Long> initCacheBiConsumer;
 
     protected abstract List<K> fetchKeys();
 

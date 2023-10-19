@@ -25,6 +25,7 @@ class CacheTest {
                 .reKeys(userIds)
                 .reDbFun(CacheTest::dbFun)
                 .reDbGroupFun(User::getUserId)
+                .initValueType(User.class)
                 .initRedisKeyFun(i -> "test-key-arr:" + i)
                 .initObtainCacheFun(this::mGet)
                 .initCacheBiConsumer(this::cacheData)
@@ -34,7 +35,6 @@ class CacheTest {
         // 测试缓存
         List<User> cacheUsersList = arrStrCacheHandler.handleToList();
 
-        cacheUsersList.forEach(a -> System.out.println(a.getUserId()));
         assertEquals(cacheUsersList.size(), userIds.size());
         assertTrue(cacheUsersList.stream().allMatch(user -> userIds.stream().anyMatch(id -> id.equals(user.getUserId()))));
 
@@ -61,6 +61,7 @@ class CacheTest {
                 .reKeys(userIds)
                 .reDbFun(CacheTest::dbFun)
                 .reDbGroupFun(User::getUserId)
+                .initValueType(User.class)
                 .initRedisKeyFun(i -> "test-key-obj:" + i)
                 .initObtainCacheFun(this::mGet)
                 .initCacheBiConsumer(this::cacheData)
@@ -69,8 +70,8 @@ class CacheTest {
 
         // 测试缓存
         List<User> cacheUsersList = arrStrCacheHandler.handleToList();
-//        assertEquals(cacheUsersList.size(), userIds.size());
-//        assertTrue(cacheUsersList.stream().allMatch(user -> userIds.contains(user.getUserId())));
+        assertEquals(cacheUsersList.size(), userIds.size());
+        assertTrue(cacheUsersList.stream().allMatch(user -> userIds.contains(user.getUserId())));
 
         Map<String, User> cacheUsersMap = arrStrCacheHandler.handleToMap();
         assertEquals(cacheUsersMap.size(), userIds.size());
@@ -79,8 +80,8 @@ class CacheTest {
 
         // 测试DB
         List<User> dbUsersList = arrStrCacheHandler.toBuilder().cacheOn(Boolean.FALSE).build().handleToList();
-//        assertEquals(dbUsersList.size(), userIds.size());
-//        assertTrue(dbUsersList.stream().allMatch(user -> userIds.contains(user.getUserId())));
+        assertEquals(dbUsersList.size(), userIds.size());
+        assertTrue(dbUsersList.stream().allMatch(user -> userIds.contains(user.getUserId())));
 
         Map<String, User> dbUsersMap = arrStrCacheHandler.handleToMap();
         assertEquals(dbUsersMap.size(), userIds.size());

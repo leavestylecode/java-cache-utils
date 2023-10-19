@@ -1,12 +1,10 @@
 package me.leavestyle.handler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Builder;
 import lombok.NonNull;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
+import me.leavestyle.common.JsonUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -16,9 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -28,58 +24,27 @@ import java.util.stream.Stream;
  * 缓存中的value格式为：{obj}
  *
  * @param <K> key的基础类型
- * @param <R> value的基础类型
+ * @param <V> value的基础类型
  */
 @Slf4j
 @SuperBuilder(toBuilder = true)
-public class ObjStrCacheHandler<K, R> extends AbstractCacheHandler<K, R> {
-
-
-    /**
-     * keys
-     */
-    @NonNull
-    private final List<K> reKeys;
+public class ObjStrCacheHandler<K, V> extends AbstractCacheHandler<K, V> {
 
     /**
      * DB查询函数
      */
     @NonNull
-    private final Function<List<K>, List<R>> reDbFun;
+    private final Function<List<K>, List<V>> reDbFun;
 
     /**
      * DB的key取值函数
      */
-    private final Function<R, K> reDbGroupFun;
+    private final Function<V, K> reDbGroupFun;
 
     /**
-     * 不缓存策略，默认关闭
+     * json映射value的类型
      */
-    @NonNull
-    @Builder.Default
-    private final Predicate<R> opNoCacheStrategy = object -> false;
-
-    /**
-     * redis过期时间，时间单位和 initCacheBiConsumer 中保持一致
-     */
-    @NonNull
-    @Builder.Default
-    private final Long opExpireTime = 3000L;
-
-    /**
-     * redis的key生成函数
-     */
-    private final Function<K, String> initRedisKeyFun;
-
-    /**
-     * 获取缓存函数
-     */
-    private final Function<List<String>, List<String>> initObtainCacheFun;
-
-    /**
-     * 缓存数据函数
-     */
-    private final BiConsumer<Map<String, String>, Long> initCacheBiConsumer;
+    protected final Class<V> initValueType;
 
     @Override
     protected List<K> fetchKeys() {
@@ -87,7 +52,7 @@ public class ObjStrCacheHandler<K, R> extends AbstractCacheHandler<K, R> {
     }
 
     @Override
-    protected Map<K, R> fetchFromCache(List<K> keys) {
+    protected Map<K, V> fetchFromCache(List<K> keys) {
         List<String> cacheKeys = keys.stream().map(initRedisKeyFun).collect(Collectors.toList());
         List<String> redisValues = initObtainCacheFun.apply(cacheKeys);
 
@@ -97,8 +62,7 @@ public class ObjStrCacheHandler<K, R> extends AbstractCacheHandler<K, R> {
                 return null;
             }
             try {
-                R value = StringUtils.isBlank(redisValue) ? null : new ObjectMapper().readValue(redisValue, new TypeReference<R>() {
-                });
+                V value = StringUtils.isBlank(redisValue) ? null : JsonUtils.toObj(redisValue, this.initValueType);
                 return Pair.of(keys.get(i), value);
             } catch (IOException e) {
                 log.error("Convert json to object error : ", e);
@@ -108,13 +72,13 @@ public class ObjStrCacheHandler<K, R> extends AbstractCacheHandler<K, R> {
     }
 
     @Override
-    protected Map<K, R> fetchFromDb(List<K> keys) {
+    protected Map<K, V> fetchFromDb(List<K> keys) {
         if (CollectionUtils.isEmpty(keys)) {
             return new HashMap<>();
         }
 
         log.debug("query from DB , keys are not cached = {} ", keys);
-        List<R> dbData = this.reDbFun.apply(keys);
+        List<V> dbData = this.reDbFun.apply(keys);
         if (CollectionUtils.isEmpty(dbData)) {
             return new HashMap<>();
         }
@@ -124,13 +88,13 @@ public class ObjStrCacheHandler<K, R> extends AbstractCacheHandler<K, R> {
     }
 
     @Override
-    protected void writeToCache(List<K> unCachedKeys, Map<K, R> dbData) {
+    protected void writeToCache(List<K> unCachedKeys, Map<K, V> dbData) {
         if (CollectionUtils.isEmpty(unCachedKeys)) {
             return;
         }
         try {
             Map<String, String> convertValues = unCachedKeys.stream().map(key -> {
-                R value = dbData.get(key);
+                V value = dbData.get(key);
                 // 不缓存策略
                 if (this.opNoCacheStrategy.test(value)) {
                     return null;
@@ -140,23 +104,23 @@ public class ObjStrCacheHandler<K, R> extends AbstractCacheHandler<K, R> {
                     return Pair.of(this.initRedisKeyFun.apply(key), "");
                 }
                 try {
-                    return Pair.of(this.initRedisKeyFun.apply(key), new ObjectMapper().writeValueAsString(value));
+                    return Pair.of(this.initRedisKeyFun.apply(key), JsonUtils.toJsonStr(value));
                 } catch (JsonProcessingException e) {
                     log.error("Convert object to json error : ", e);
                     return null;
                 }
             }).filter(Objects::nonNull).collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
             this.initCacheBiConsumer.accept(convertValues, this.opExpireTime);
-            log.info("multiSet cache, keys = {} expireMs = {}", new ObjectMapper().writeValueAsString(convertValues.keySet()), this.opExpireTime);
+            log.info("multiSet cache, keys = {} expireMs = {}", JsonUtils.toJsonStr(convertValues.keySet()), this.opExpireTime);
         } catch (Exception e) {
             log.error("redis multi cache error : ", e);
         }
     }
 
     @Override
-    protected Map<K, R> mergeData(AbstractCacheHandler.Result<K, R> result) {
-        Map<K, R> cachedData = result.getCachedData();
-        Map<K, R> dbData = result.getDbData();
+    protected Map<K, V> mergeData(AbstractCacheHandler.Result<K, V> result) {
+        Map<K, V> cachedData = result.getCachedData();
+        Map<K, V> dbData = result.getDbData();
 
         return Stream.of(cachedData, dbData).flatMap(map -> map.entrySet().stream()).filter(entry ->
                 entry != null && entry.getValue() != null
@@ -164,8 +128,8 @@ public class ObjStrCacheHandler<K, R> extends AbstractCacheHandler<K, R> {
     }
 
     @Override
-    public List<R> handleToList() {
-        Map<K, R> data = this.handleToMap();
+    public List<V> handleToList() {
+        Map<K, V> data = this.handleToMap();
         return reKeys.stream().map(data::get).filter(Objects::nonNull).collect(Collectors.toList());
     }
 

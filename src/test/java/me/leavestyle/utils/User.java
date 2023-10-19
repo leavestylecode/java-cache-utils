@@ -1,14 +1,13 @@
 package me.leavestyle.utils;
 
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.*;
 
 @Getter
 @Builder
 @ToString
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
 
     private String userId;
