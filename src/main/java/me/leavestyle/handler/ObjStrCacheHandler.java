@@ -12,7 +12,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -21,15 +24,16 @@ import java.util.stream.Stream;
 
 /**
  * 批量缓存处理：缓存值为数组格式的字符串。
- * 即缓存key对应1-n个value的场景。
- * 缓存中的value格式为：[{obj1},{obj2}]
+ * 即缓存key对应1个value的场景。
+ * 缓存中的value格式为：{obj}
  *
  * @param <K> key的基础类型
  * @param <R> value的基础类型
  */
 @Slf4j
 @SuperBuilder(toBuilder = true)
-public class ArrStrCacheHandler<K, R> extends AbstractCacheHandler<K, List<R>> {
+public class ObjStrCacheHandler<K, R> extends AbstractCacheHandler<K, R> {
+
 
     /**
      * keys
@@ -53,7 +57,7 @@ public class ArrStrCacheHandler<K, R> extends AbstractCacheHandler<K, List<R>> {
      */
     @NonNull
     @Builder.Default
-    private final Predicate<List<R>> opNoCacheStrategy = list -> false;
+    private final Predicate<R> opNoCacheStrategy = object -> false;
 
     /**
      * redis过期时间，时间单位和 initCacheBiConsumer 中保持一致
@@ -83,7 +87,7 @@ public class ArrStrCacheHandler<K, R> extends AbstractCacheHandler<K, List<R>> {
     }
 
     @Override
-    protected Map<K, List<R>> fetchFromCache(List<K> keys) {
+    protected Map<K, R> fetchFromCache(List<K> keys) {
         List<String> cacheKeys = keys.stream().map(initRedisKeyFun).collect(Collectors.toList());
         List<String> redisValues = initObtainCacheFun.apply(cacheKeys);
 
@@ -93,7 +97,7 @@ public class ArrStrCacheHandler<K, R> extends AbstractCacheHandler<K, List<R>> {
                 return null;
             }
             try {
-                List<R> value = StringUtils.isBlank(redisValue) ? new ArrayList<>() : new ObjectMapper().readValue(redisValue, new TypeReference<List<R>>() {
+                R value = StringUtils.isBlank(redisValue) ? null : new ObjectMapper().readValue(redisValue, new TypeReference<R>() {
                 });
                 return Pair.of(keys.get(i), value);
             } catch (IOException e) {
@@ -104,7 +108,7 @@ public class ArrStrCacheHandler<K, R> extends AbstractCacheHandler<K, List<R>> {
     }
 
     @Override
-    protected Map<K, List<R>> fetchFromDb(List<K> keys) {
+    protected Map<K, R> fetchFromDb(List<K> keys) {
         if (CollectionUtils.isEmpty(keys)) {
             return new HashMap<>();
         }
@@ -116,23 +120,23 @@ public class ArrStrCacheHandler<K, R> extends AbstractCacheHandler<K, List<R>> {
         }
 
         // 数据格式转换
-        return dbData.stream().collect(Collectors.groupingBy(reDbGroupFun));
+        return dbData.stream().collect(Collectors.toMap(this.reDbGroupFun, i -> i));
     }
 
     @Override
-    protected void writeToCache(List<K> unCachedKeys, Map<K, List<R>> dbData) {
+    protected void writeToCache(List<K> unCachedKeys, Map<K, R> dbData) {
         if (CollectionUtils.isEmpty(unCachedKeys)) {
             return;
         }
         try {
             Map<String, String> convertValues = unCachedKeys.stream().map(key -> {
-                List<R> value = dbData.get(key);
+                R value = dbData.get(key);
                 // 不缓存策略
                 if (this.opNoCacheStrategy.test(value)) {
                     return null;
                 }
                 // 空值处理
-                if (CollectionUtils.isEmpty(value)) {
+                if (value == null) {
                     return Pair.of(this.initRedisKeyFun.apply(key), "");
                 }
                 try {
@@ -150,19 +154,19 @@ public class ArrStrCacheHandler<K, R> extends AbstractCacheHandler<K, List<R>> {
     }
 
     @Override
-    protected Map<K, List<R>> mergeData(AbstractCacheHandler.Result<K, List<R>> result) {
-        Map<K, List<R>> cachedData = result.getCachedData();
-        Map<K, List<R>> dbData = result.getDbData();
+    protected Map<K, R> mergeData(AbstractCacheHandler.Result<K, R> result) {
+        Map<K, R> cachedData = result.getCachedData();
+        Map<K, R> dbData = result.getDbData();
 
         return Stream.of(cachedData, dbData).flatMap(map -> map.entrySet().stream()).filter(entry ->
-                entry != null && CollectionUtils.isNotEmpty(entry.getValue())
+                entry != null && entry.getValue() != null
         ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Override
     public List<R> handleToList() {
-        Map<K, List<R>> data = this.handleToMap();
-        return reKeys.stream().map(data::get).filter(CollectionUtils::isNotEmpty).flatMap(Collection::stream).collect(Collectors.toList());
+        Map<K, R> data = this.handleToMap();
+        return reKeys.stream().map(data::get).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
 }
