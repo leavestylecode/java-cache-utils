@@ -1,7 +1,6 @@
 package me.leavestyle.handler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import lombok.NonNull;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import me.leavestyle.common.JsonUtils;
@@ -14,7 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -28,18 +26,7 @@ import java.util.stream.Stream;
  */
 @Slf4j
 @SuperBuilder(toBuilder = true)
-public class ObjStrCacheHandler<K, V> extends AbstractCacheHandler<K, V> {
-
-    /**
-     * DB查询函数
-     */
-    @NonNull
-    private final Function<List<K>, List<V>> reDbFun;
-
-    /**
-     * DB的key取值函数
-     */
-    private final Function<V, K> reDbGroupFun;
+public class ObjStrCacheHandler<K, V> extends StrAbstractCacheHandler<K, V, V> {
 
     /**
      * json映射value的类型
@@ -113,19 +100,10 @@ public class ObjStrCacheHandler<K, V> extends AbstractCacheHandler<K, V> {
     }
 
     @Override
-    protected Map<K, V> mergeData(AbstractCacheHandler.Result<K, V> result) {
-        Map<K, V> cachedData = result.getCachedData();
-        Map<K, V> dbData = result.getDbData();
-
-        return Stream.of(cachedData, dbData).flatMap(map -> map.entrySet().stream()).filter(entry ->
-                entry != null && entry.getValue() != null
-        ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    protected List<V> mergeData(List<K> keys, Map<K, V> cachedDb, Map<K, V> dbData) {
+        return keys.stream()
+                .map(key -> cachedDb.getOrDefault(key, dbData.get(key)))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
-
-    @Override
-    public List<V> handleToList(List<K> keys) {
-        Map<K, V> data = this.handleToMap(keys);
-        return keys.stream().map(data::get).filter(Objects::nonNull).collect(Collectors.toList());
-    }
-
 }

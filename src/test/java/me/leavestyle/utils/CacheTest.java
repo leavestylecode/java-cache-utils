@@ -32,25 +32,15 @@ class CacheTest {
                 .build();
 
         // 测试缓存
-        List<Model> cacheModelsList = arrStrCacheHandler.handleToList(ids);
+        List<Model> cacheModelsList = arrStrCacheHandler.handle(ids);
 
         assertEquals(cacheModelsList.size(), ids.size());
         assertTrue(cacheModelsList.stream().allMatch(model -> ids.stream().anyMatch(id -> id.equals(model.getId()))));
 
-        Map<String, List<Model>> cacheModelsMap = arrStrCacheHandler.handleToMap(ids);
-        assertEquals(cacheModelsMap.size(), ids.size());
-        assertTrue(cacheModelsMap.entrySet().stream().allMatch(entry -> ids.contains(entry.getKey())));
-        assertTrue(cacheModelsMap.entrySet().stream().allMatch(entry -> ids.contains(entry.getValue().get(0).getId())));
-
         // 测试DB
-        List<Model> dbModelsList = arrStrCacheHandler.toBuilder().cacheOn(Boolean.FALSE).build().handleToList(ids);
+        List<Model> dbModelsList = arrStrCacheHandler.toBuilder().cacheOn(Boolean.FALSE).build().handle(ids);
         assertEquals(dbModelsList.size(), ids.size());
         assertTrue(dbModelsList.stream().allMatch(model -> ids.contains(model.getId())));
-
-        Map<String, List<Model>> dbModelsMap = arrStrCacheHandler.handleToMap(ids);
-        assertEquals(dbModelsMap.size(), ids.size());
-        assertTrue(dbModelsMap.entrySet().stream().allMatch(entry -> ids.contains(entry.getKey())));
-        assertTrue(dbModelsMap.entrySet().stream().allMatch(entry -> ids.contains(entry.getValue().get(0).getId())));
     }
 
     @Test
@@ -67,24 +57,14 @@ class CacheTest {
                 .build();
 
         // 测试缓存
-        List<Model> cacheModelsList = arrStrCacheHandler.handleToList(ids);
+        List<Model> cacheModelsList = arrStrCacheHandler.handle(ids);
         assertEquals(cacheModelsList.size(), ids.size());
         assertTrue(cacheModelsList.stream().allMatch(model -> ids.contains(model.getId())));
 
-        Map<String, Model> cacheModelsMap = arrStrCacheHandler.handleToMap(ids);
-        assertEquals(cacheModelsMap.size(), ids.size());
-        assertTrue(cacheModelsMap.entrySet().stream().allMatch(entry -> ids.contains(entry.getKey())));
-        assertTrue(cacheModelsMap.entrySet().stream().allMatch(entry -> ids.contains(entry.getValue().getId())));
-
         // 测试DB
-        List<Model> dbModelsList = arrStrCacheHandler.toBuilder().cacheOn(Boolean.FALSE).build().handleToList(ids);
+        List<Model> dbModelsList = arrStrCacheHandler.toBuilder().cacheOn(Boolean.FALSE).build().handle(ids);
         assertEquals(dbModelsList.size(), ids.size());
         assertTrue(dbModelsList.stream().allMatch(model -> ids.contains(model.getId())));
-
-        Map<String, Model> dbModelsMap = arrStrCacheHandler.handleToMap(ids);
-        assertEquals(dbModelsMap.size(), ids.size());
-        assertTrue(dbModelsMap.entrySet().stream().allMatch(entry -> ids.contains(entry.getKey())));
-        assertTrue(dbModelsMap.entrySet().stream().allMatch(entry -> ids.contains(entry.getValue().getId())));
 
     }
 
