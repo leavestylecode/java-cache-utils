@@ -19,7 +19,8 @@ import java.util.function.UnaryOperator;
  * 缓存中的value格式为：[{obj1},{obj2}]
  *
  * @param <K> key的基础类型
- * @param <V> value的基础类型
+ * @param <V> 理解成缓存中要转换的数据类型
+ * @param <R> DB查询返回的数据类型
  */
 @Slf4j
 @SuperBuilder(toBuilder = true)
