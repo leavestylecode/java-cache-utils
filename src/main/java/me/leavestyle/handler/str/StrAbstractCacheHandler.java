@@ -1,9 +1,10 @@
-package me.leavestyle.handler;
+package me.leavestyle.handler.str;
 
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
+import me.leavestyle.handler.AbstractCacheHandler;
 
 import java.util.List;
 import java.util.Map;
@@ -63,5 +64,11 @@ public abstract class StrAbstractCacheHandler<K, V, R> extends AbstractCacheHand
     @NonNull
     @Builder.Default
     protected final Long opExpireTime = 3000L;
+
+
+    /**
+     * json映射value的类型
+     */
+    protected final Class<R> initValueType;
 
 }

@@ -1,8 +1,7 @@
-package me.leavestyle.handler;
+package me.leavestyle.handler.str;
 
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
-import me.leavestyle.common.CacheFunUtils;
 import me.leavestyle.common.JsonUtils;
 
 import java.util.List;
@@ -22,30 +21,23 @@ import java.util.stream.Collectors;
 @SuperBuilder(toBuilder = true)
 public class ObjStrCacheHandler<K, V> extends StrAbstractCacheHandler<K, V, V> {
 
-    /**
-     * json映射value的类型
-     */
-    protected final Class<V> initValueType;
-
     @Override
     protected Map<K, V> fetchFromCache(List<K> keys) {
-        return CacheFunUtils.fetchFromCache(keys, initRedisKeyFun, initObtainCacheFun,
+        return StrCacheFunUtils.fetchFromCache(keys, this,
                 cacheValue -> JsonUtils.toObjWithDefault(cacheValue, initValueType)
         );
     }
 
     @Override
     protected Map<K, V> fetchFromDb(List<K> keys) {
-        return CacheFunUtils.fetchFromDb(keys, reDbFun,
+        return StrCacheFunUtils.fetchFromDb(keys, this,
                 dbData -> dbData.stream().collect(Collectors.toMap(this.reDbGroupFun, i -> i))
         );
     }
 
     @Override
     protected void writeToCache(List<K> unCachedKeys, Map<K, V> dbData) {
-        CacheFunUtils.writeToCache(unCachedKeys, dbData, this.opNoCacheStrategy, Objects::isNull,
-                this.initRedisKeyFun, initCacheBiConsumer, opExpireTime
-        );
+        StrCacheFunUtils.writeToCache(unCachedKeys, dbData, Objects::isNull, this);
     }
 
     @Override

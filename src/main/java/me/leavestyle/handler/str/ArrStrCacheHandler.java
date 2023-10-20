@@ -1,8 +1,7 @@
-package me.leavestyle.handler;
+package me.leavestyle.handler.str;
 
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
-import me.leavestyle.common.CacheFunUtils;
 import me.leavestyle.common.JsonUtils;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -30,23 +29,21 @@ public class ArrStrCacheHandler<K, V> extends StrAbstractCacheHandler<K, List<V>
 
     @Override
     protected Map<K, List<V>> fetchFromCache(List<K> keys) {
-        return CacheFunUtils.fetchFromCache(keys, initRedisKeyFun, initObtainCacheFun,
+        return StrCacheFunUtils.fetchFromCache(keys, this,
                 cacheValue -> JsonUtils.toListObjWithDefault(cacheValue, initValueType)
         );
     }
 
     @Override
     protected Map<K, List<V>> fetchFromDb(List<K> keys) {
-        return CacheFunUtils.fetchFromDb(keys, reDbFun,
+        return StrCacheFunUtils.fetchFromDb(keys, this,
                 dbData -> dbData.stream().collect(Collectors.groupingBy(reDbGroupFun))
         );
     }
 
     @Override
     protected void writeToCache(List<K> unCachedKeys, Map<K, List<V>> dbData) {
-        CacheFunUtils.writeToCache(unCachedKeys, dbData, this.opNoCacheStrategy, CollectionUtils::isEmpty,
-                this.initRedisKeyFun, initCacheBiConsumer, opExpireTime
-        );
+        StrCacheFunUtils.writeToCache(unCachedKeys, dbData, CollectionUtils::isEmpty, this);
     }
 
     @Override
