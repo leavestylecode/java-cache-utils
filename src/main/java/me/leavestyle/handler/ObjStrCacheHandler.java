@@ -1,12 +1,9 @@
 package me.leavestyle.handler;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import me.leavestyle.common.CacheFunUtils;
 import me.leavestyle.common.JsonUtils;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.List;
 import java.util.Map;
@@ -46,28 +43,9 @@ public class ObjStrCacheHandler<K, V> extends StrAbstractCacheHandler<K, V, V> {
 
     @Override
     protected void writeToCache(List<K> unCachedKeys, Map<K, V> dbData) {
-        if (CollectionUtils.isEmpty(unCachedKeys)) {
-            return;
-        }
-        Map<String, String> convertValues = unCachedKeys.stream().map(key -> {
-            V value = dbData.get(key);
-            // 不缓存策略
-            if (this.opNoCacheStrategy.test(value)) {
-                return null;
-            }
-            // 空值处理
-            if (value == null) {
-                return Pair.of(this.initRedisKeyFun.apply(key), "");
-            }
-            try {
-                return Pair.of(this.initRedisKeyFun.apply(key), JsonUtils.toJsonStr(value));
-            } catch (JsonProcessingException e) {
-                log.error("Convert object to json error : ", e);
-                return null;
-            }
-        }).filter(Objects::nonNull).collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
-        // 写入缓存
-        CacheFunUtils.writeToCache(initCacheBiConsumer, convertValues, opExpireTime);
+        CacheFunUtils.writeToCache(unCachedKeys, dbData, this.opNoCacheStrategy, Objects::isNull,
+                this.initRedisKeyFun, initCacheBiConsumer, opExpireTime
+        );
     }
 
     @Override

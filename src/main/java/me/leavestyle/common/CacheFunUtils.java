@@ -1,8 +1,8 @@
 package me.leavestyle.common;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.HashMap;
@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.ObjLongConsumer;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -59,12 +60,30 @@ public class CacheFunUtils {
         return classifier.apply(dbData);
     }
 
-    public static void writeToCache(
-            ObjLongConsumer<Map<String, String>> initCacheBiConsumer, Map<String, String> convertValues, Long opExpireTime
+    public static <K, V> void writeToCache(
+            List<K> unCachedKeys, Map<K, V> dbData, Predicate<V> opNoCacheStrategy, Predicate<V> emptyStrategy,
+            Function<K, String> initRedisKeyFun, ObjLongConsumer<Map<String, String>> initCacheBiConsumer, Long opExpireTime
     ) {
-        if (MapUtils.isEmpty(convertValues)) {
+        if (CollectionUtils.isEmpty(unCachedKeys)) {
             return;
         }
+        Map<String, String> convertValues = unCachedKeys.stream().map(key -> {
+            V value = dbData.get(key);
+            // 不缓存策略
+            if (opNoCacheStrategy.test(value)) {
+                return null;
+            }
+            // 空值判断
+            if (emptyStrategy.test(value)) {
+                return Pair.of(initRedisKeyFun.apply(key), "");
+            }
+            try {
+                return Pair.of(initRedisKeyFun.apply(key), JsonUtils.toJsonStr(value));
+            } catch (JsonProcessingException e) {
+                log.error("Convert object to json error : ", e);
+                return null;
+            }
+        }).filter(Objects::nonNull).collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
         try {
             initCacheBiConsumer.accept(convertValues, opExpireTime);
             log.info("multiSet cache, keys = {} expireMs = {}", JsonUtils.toJsonStr(convertValues.keySet()), opExpireTime);
