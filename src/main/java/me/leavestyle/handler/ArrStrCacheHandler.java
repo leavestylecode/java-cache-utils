@@ -1,4 +1,4 @@
-package me.leavestyle.handler.str;
+package me.leavestyle.handler;
 
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
