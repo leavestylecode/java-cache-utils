@@ -29,6 +29,30 @@
 - [x] Java 11
 - [x] Java 8
 
+## 安装
+
+### Maven
+
+``` xml
+<dependency>
+  <groupId>io.github.leavestyle</groupId>
+  <artifactId>java-cache-utils</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
+### Gradle Kotlin DSL
+
+``` kotlin
+implementation(group = "io.github.leavestyle", name = "java-cache-utils", version = "1.0.0")
+```
+
+### Gradle Groovy DSL
+
+``` groovy
+implementation group: 'io.github.leavestyle', name: 'java-cache-utils', version: '1.0.0'
+```
+
 ## Handler介绍
 
 > 代码中封装了不同的xxHandler用于处理不同的缓存情况

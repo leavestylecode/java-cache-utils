@@ -1,15 +1,19 @@
 plugins {
     java
+    `java-library`
+    `maven-publish`
+    signing
 }
+
+group = "io.github.leavestyle-coder"
+version = "1.0.1"
 
 java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(8))
-    }
+    withJavadocJar()
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }
-
-group = "me.leavestyle"
-version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -33,4 +37,62 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+            versionMapping {
+                usage("java-api") {
+                    fromResolutionOf("runtimeClasspath")
+                }
+                usage("java-runtime") {
+                    fromResolutionResult()
+                }
+            }
+            pom {
+                name = "Java Cache Utils"
+                description = "Convenient Utilities for Cache of Java"
+                url = "https://github.com/leavestyle-coder/java-cache-utils"
+                licenses {
+                    license {
+                        name = "GNU Lesser General Public License"
+                        url = "https://www.gnu.org/licenses/lgpl-3.0.txt"
+                    }
+                }
+                developers {
+                    developer {
+                        id = "leavestyle"
+                        name = "Rambo"
+                        email = "leavestyle101@gmail.com"
+                    }
+                }
+                scm {
+                    connection = "https://github.com/leavestyle-coder/java-cache-utils.git"
+                    developerConnection = "https://github.com/leavestyle-coder/java-cache-utils.git"
+                    url = "https://github.com/leavestyle-coder/java-cache-utils"
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = project.properties["ossrhUsername"]?.toString()
+                password = project.properties["ossrhPassword"]?.toString()
+            }
+        }
+    }
+}
+
+signing {
+    sign(publishing.publications["mavenJava"])
+}
+
+tasks.javadoc {
+    if (JavaVersion.current().isJava9Compatible) {
+        (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
+    }
 }
