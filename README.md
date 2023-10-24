@@ -37,20 +37,20 @@
 <dependency>
   <groupId>io.github.leavestyle</groupId>
   <artifactId>java-cache-utils</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 </dependency>
 ```
 
 ### Gradle Kotlin DSL
 
 ``` kotlin
-implementation(group = "io.github.leavestyle", name = "java-cache-utils", version = "1.0.0")
+implementation(group = "io.github.leavestyle", name = "java-cache-utils", version = "1.0.1")
 ```
 
 ### Gradle Groovy DSL
 
 ``` groovy
-implementation group: 'io.github.leavestyle', name: 'java-cache-utils', version: '1.0.0'
+implementation group: 'io.github.leavestyle', name: 'java-cache-utils', version: '1.0.1'
 ```
 
 ## Handler介绍
