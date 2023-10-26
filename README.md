@@ -64,11 +64,11 @@ implementation group: 'io.github.leavestyle-coder', name: 'java-cache-utils', ve
 ```
 // 例如测试用例中的缓存值
 [
-	{
-		"userId": "1",
-		"userName": "name1",
-		"userAddress": "address1"
-	}
+    {
+        "userId": "1",
+        "userName": "name1",
+        "userAddress": "address1"
+    }
 ]
 ```
 
