@@ -59,7 +59,7 @@ implementation group: 'io.github.leavestyle-coder', name: 'java-cache-utils', ve
 
 ### 1. ArrStrCacheHandler
 
-缓存中的值是一个数据数组转成的字符串，即处理一个key可能存在1到n个数据的情况
+缓存中的值是一个【数据数组】转成的字符串，即处理一个key可能存在1到n个数据的情况。
 
 ```
 // 例如测试用例中的缓存值
@@ -70,6 +70,19 @@ implementation group: 'io.github.leavestyle-coder', name: 'java-cache-utils', ve
         "userAddress": "address1"
     }
 ]
+```
+
+### 2. ObjStrCacheHandler
+
+缓存中的值是一个【数据对象】转成的字符串，即处理一个key最多存在1个数据的情况。
+
+```
+// 例如测试用例中的缓存值
+{
+    "userId": "1",
+    "userName": "name1",
+    "userAddress": "address1"
+}
 ```
 
 ## 使用
